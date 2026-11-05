@@ -5,6 +5,7 @@ import {
   EyeOffIcon,
   Loader2Icon,
 } from "lucide-react";
+import { registerUser } from "../services/authService";
 
 const Register = () => {
   const navigate = useNavigate();
@@ -15,18 +16,25 @@ const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const handleSubmit = async (e) => {
+  e.preventDefault();
 
+  try {
     setLoading(true);
 
-    // Temporary navigation.
-    // Real registration API will be connected later.
-    setTimeout(() => {
-      setLoading(false);
-      navigate("/dashboard");
-    }, 1000);
-  };
+    await registerUser({
+      name,
+      email,
+      password,
+    });
+
+    navigate("/dashboard");
+  } catch (error) {
+    alert(error.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <main className="min-h-screen bg-black text-white">
