@@ -1,4 +1,11 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 import { useAuth } from "./AuthContext";
 
@@ -18,9 +25,7 @@ const ProjectProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (authLoading) {
-      return;
-    }
+    if (authLoading) return;
 
     if (!user) {
       setProjects([]);
@@ -33,7 +38,6 @@ const ProjectProvider = ({ children }) => {
 
       try {
         const data = await getProjectsAPI();
-
         setProjects(data.projects || []);
       } catch (error) {
         console.error("Failed to load projects:", error);
@@ -46,19 +50,17 @@ const ProjectProvider = ({ children }) => {
     loadProjects();
   }, [user, authLoading]);
 
-  const createProject = async (projectData) => {
+  const createProject = useCallback(async (projectData) => {
     const data = await createProjectAPI(projectData);
-
     const newProject = data.project;
 
     setProjects((previousProjects) => [newProject, ...previousProjects]);
 
     return newProject;
-  };
+  }, []);
 
-  const updateProject = async (projectId, updates) => {
+  const updateProject = useCallback(async (projectId, updates) => {
     const data = await updateProjectAPI(projectId, updates);
-
     const updatedProject = data.project;
 
     setProjects((previousProjects) =>
@@ -68,57 +70,76 @@ const ProjectProvider = ({ children }) => {
     );
 
     return updatedProject;
-  };
+  }, []);
 
-  const getProjectById = (projectId) => {
-    return projects.find(
-      (project) =>
-        String(project._id) === String(projectId) ||
-        String(project.id) === String(projectId),
-    );
-  };
-
-  const saveRequirements = async (projectId, requirements) => {
-    return updateProject(projectId, {
-      requirements,
-    });
-  };
-
-  const savePlan = async (projectId, plan) => {
-    return updateProject(projectId, {
-      plan,
-    });
-  };
-
-  const saveBuilder = async (projectId, builderData) => {
-    return updateProject(projectId, {
-      builder: builderData,
-    });
-  };
-
-  const deleteProject = async (projectId) => {
-  await deleteProjectAPI(projectId);
-
-  setProjects((previousProjects) =>
-    previousProjects.filter(
-      (project) =>
-        String(project._id) !== String(projectId) &&
-        String(project.id) !== String(projectId)
-    )
+  const getProjectById = useCallback(
+    (projectId) => {
+      return projects.find(
+        (project) =>
+          String(project._id) === String(projectId) ||
+          String(project.id) === String(projectId),
+      );
+    },
+    [projects],
   );
-};
 
-  const value = {
-    projects,
-    loading,
-    createProject,
-    updateProject,
-    getProjectById,
-    saveRequirements,
-    savePlan,
-    saveBuilder,
-    deleteProject,
-  };
+  const saveRequirements = useCallback(
+    (projectId, requirements) => {
+      return updateProject(projectId, { requirements });
+    },
+    [updateProject],
+  );
+
+  const savePlan = useCallback(
+    (projectId, plan) => {
+      return updateProject(projectId, { plan });
+    },
+    [updateProject],
+  );
+
+  const saveBuilder = useCallback(
+    (projectId, builderData) => {
+      return updateProject(projectId, { builder: builderData });
+    },
+    [updateProject],
+  );
+
+  const deleteProject = useCallback(async (projectId) => {
+    await deleteProjectAPI(projectId);
+
+    setProjects((previousProjects) =>
+      previousProjects.filter(
+        (project) =>
+          String(project._id) !== String(projectId) &&
+          String(project.id) !== String(projectId),
+      ),
+    );
+  }, []);
+
+  const value = useMemo(
+    () => ({
+      projects,
+      loading,
+      createProject,
+      updateProject,
+      getProjectById,
+      saveRequirements,
+      savePlan,
+      saveBuilder,
+      deleteProject,
+    }),
+    [
+      projects,
+      loading,
+      createProject,
+      updateProject,
+      getProjectById,
+      saveRequirements,
+      savePlan,
+      saveBuilder,
+      deleteProject,
+    ],
+  );
 
   return (
     <ProjectContext.Provider value={value}>{children}</ProjectContext.Provider>

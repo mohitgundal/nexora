@@ -6,32 +6,27 @@ import AudienceSelector from "./AudienceSelector";
 import StyleSelector from "./StyleSelector";
 import FeatureSelector from "./FeatureSelector";
 
-const AIRequirements = ({ project, onBack, onContinue }) => {
-  const [description, setDescription] = useState("");
-  const [audience, setAudience] = useState("");
-  const [style, setStyle] = useState("");
-  const [features, setFeatures] = useState([]);
+const AIRequirements = ({ project, onBack, onContinue, onDraftChange }) => {
+  const [description, setDescription] = useState(
+    () => project?.requirements?.description || "",
+  );
+
+  const [audience, setAudience] = useState(
+    () => project?.requirements?.audience || "",
+  );
+
+  const [style, setStyle] = useState(() => project?.requirements?.style || "");
+
+  const [features, setFeatures] = useState(
+    () => project?.requirements?.features || [],
+  );
 
   /*
    * Restore previously saved requirements
    * whenever the project becomes available.
    */
+
   useEffect(() => {
-    if (!project?.requirements) return;
-
-    const savedRequirements = project.requirements;
-
-    setDescription(savedRequirements.description || "");
-    setAudience(savedRequirements.audience || "");
-    setStyle(savedRequirements.style || "");
-    setFeatures(savedRequirements.features || []);
-  }, [project]);
-
-  const canContinue = description.trim().length >= 20 && audience && style;
-
-  const handleContinue = () => {
-    if (!canContinue) return;
-
     const requirementsData = {
       description: description.trim(),
       audience,
@@ -39,7 +34,43 @@ const AIRequirements = ({ project, onBack, onContinue }) => {
       features,
     };
 
-    onContinue(requirementsData);
+    const timeoutId = setTimeout(() => {
+      onDraftChange?.(requirementsData);
+    }, 600);
+
+    return () => clearTimeout(timeoutId);
+  }, [description, audience, style, features, onDraftChange]);
+
+  const canContinue = description.trim().length >= 20 && audience && style;
+
+  // const handleContinue = () => {
+  //   if (!canContinue) return;
+
+  //   const requirementsData = {
+  //     description: description.trim(),
+  //     audience,
+  //     style,
+  //     features,
+  //   };
+
+  //   onContinue(requirementsData);
+  // };
+
+  const getRequirementsData = () => ({
+    description: description.trim(),
+    audience,
+    style,
+    features,
+  });
+
+  const handleContinue = () => {
+    if (!canContinue) return;
+
+    onContinue(getRequirementsData());
+  };
+
+  const handleBack = () => {
+    onBack(getRequirementsData());
   };
 
   return (
@@ -49,7 +80,7 @@ const AIRequirements = ({ project, onBack, onContinue }) => {
         <div className="flex items-center justify-between">
           <button
             type="button"
-            onClick={onBack}
+            onClick={handleBack}
             className="inline-flex items-center gap-2 text-sm text-white/40 transition hover:text-white"
           >
             <ArrowLeft className="size-4" />
@@ -121,7 +152,7 @@ const AIRequirements = ({ project, onBack, onContinue }) => {
 
               <button
                 type="button"
-                onClick={onBack}
+                onClick={handleBack}
                 className="inline-flex items-center gap-2 text-sm text-white/40 transition hover:text-white"
               >
                 <ArrowLeft className="size-4" />

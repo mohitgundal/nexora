@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
@@ -14,22 +13,25 @@ const ProjectSetup = () => {
 
   const projectId = searchParams.get("projectId");
 
-  const {
-    createProject,
-    getProjectById,
-    updateProject,
-  } = useProject();
+  const { createProject, getProjectById, updateProject, loading } =
+    useProject();
 
   const [projectName, setProjectName] = useState("");
   const [projectType, setProjectType] = useState("");
   const [projectGoal, setProjectGoal] = useState("");
 
-  const canContinue =
-    projectName.trim() && projectType && projectGoal;
+  const canContinue = projectName.trim() && projectType && projectGoal;
 
   // Load existing project when editing
   useEffect(() => {
-    if (!projectId) return;
+    if (!projectId) {
+      setProjectName("");
+      setProjectType("");
+      setProjectGoal("");
+      return;
+    }
+
+    if (loading) return;
 
     const existingProject = getProjectById(projectId);
 
@@ -41,7 +43,7 @@ const ProjectSetup = () => {
     setProjectName(existingProject.name || "");
     setProjectType(existingProject.type || "");
     setProjectGoal(existingProject.goal || "");
-  }, [projectId, getProjectById]);
+  }, [projectId, loading, getProjectById]);
 
   const handleContinue = async () => {
     if (!canContinue) return;
@@ -88,7 +90,6 @@ const ProjectSetup = () => {
   return (
     <section className="min-h-screen px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-5xl">
-
         {/* Top Navigation */}
         <div className="flex items-center justify-between">
           <button
@@ -114,9 +115,7 @@ const ProjectSetup = () => {
 
           <h1 className="mt-6 text-4xl font-bold tracking-tight sm:text-5xl">
             Let's understand what
-            <span className="block text-purple-400">
-              you're building.
-            </span>
+            <span className="block text-purple-400">you're building.</span>
           </h1>
 
           <p className="mt-5 text-base leading-7 text-white/45 sm:text-lg">
@@ -127,25 +126,15 @@ const ProjectSetup = () => {
 
         {/* Form */}
         <div className="mt-14 space-y-12">
-
-          <ProjectNameInput
-            value={projectName}
-            onChange={setProjectName}
-          />
+          <ProjectNameInput value={projectName} onChange={setProjectName} />
 
           <div className="border-t border-white/10" />
 
-          <ProjectTypeSelector
-            value={projectType}
-            onChange={setProjectType}
-          />
+          <ProjectTypeSelector value={projectType} onChange={setProjectType} />
 
           <div className="border-t border-white/10" />
 
-          <ProjectGoalSelector
-            value={projectGoal}
-            onChange={setProjectGoal}
-          />
+          <ProjectGoalSelector value={projectGoal} onChange={setProjectGoal} />
 
           {/* Continue */}
           <div className="flex justify-end border-t border-white/10 pb-12 pt-8">
@@ -159,7 +148,6 @@ const ProjectSetup = () => {
               <ArrowRight className="size-4" />
             </button>
           </div>
-
         </div>
       </div>
     </section>

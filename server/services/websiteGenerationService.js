@@ -25,6 +25,7 @@ const generateSourceFile = async ({
   reasoning = null,
 }) => {
   const apiKey = process.env.OPENROUTER_API_KEY;
+
   const model =
     process.env.OPENROUTER_MODEL || "nvidia/nemotron-3-ultra-550b-a55b:free";
 
@@ -58,24 +59,27 @@ GENERAL RULES:
 
   const response = await fetch(OPENROUTER_URL, {
     method: "POST",
+
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
       "HTTP-Referer": "http://localhost:5173",
       "X-OpenRouter-Title": "Nexora",
     },
+
     body: JSON.stringify({
       model,
+
       messages: [
         {
           role: "user",
           content: prompt,
         },
       ],
+
       max_tokens: maxTokens,
       temperature: 0.2,
 
-      // Only apply reasoning controls when explicitly supplied.
       ...(reasoning ? { reasoning } : {}),
     }),
   });
@@ -91,18 +95,23 @@ GENERAL RULES:
   }
 
   const choice = data.choices?.[0];
+
   const finishReason = choice?.finish_reason || "unknown";
+
   const messageContent = choice?.message?.content;
 
   console.log("========== OPENROUTER RESPONSE DEBUG ==========");
+
   console.log("File:", filePath);
   console.log("Model:", data.model || model);
   console.log("Finish reason:", finishReason);
   console.log("Usage:", data.usage);
+
   console.log(
     "Response text length:",
     typeof messageContent === "string" ? messageContent.length : 0,
   );
+
   console.log("===============================================");
 
   if (finishReason === "length") {
@@ -131,15 +140,54 @@ GENERAL RULES:
   return cleanedCode;
 };
 
-const generateWebsiteProject = async ({ project, requirements, plan }) => {
+// Generate the complete React website project.
+const generateWebsiteProject = async ({
+  project,
+  requirements,
+  plan,
+  onProgress = async () => {},
+}) => {
+  const reportProgress = async (event) => {
+    await onProgress({
+      ...event,
+      updatedAt: new Date(),
+    });
+  };
+
+  // STEP 1: Analyze project requirements.
+  await reportProgress({
+    step: 1,
+    stage: "analyzing_requirements",
+    message: "Analyzing project requirements",
+    status: "started",
+  });
+
+  if (!requirements || !plan) {
+    throw new Error("Project requirements or website plan are missing.");
+  }
+
   const context = getProjectContext(project, requirements, plan);
 
-  console.log("Nexora: Generating Navbar.jsx");
+  await reportProgress({
+    step: 1,
+    stage: "analyzing_requirements",
+    message: "Project requirements analyzed successfully",
+    status: "completed",
+  });
 
-  const navbarCode = await generateSourceFile({
-    context,
-    filePath: "src/components/Navbar.jsx",
-    instructions: `
+  // STEP 2: Prepare website structure.
+  await reportProgress({
+    step: 2,
+    stage: "preparing_structure",
+    message: "Preparing website component structure",
+    status: "started",
+  });
+
+  const componentSpecifications = [
+    {
+      filePath: "src/components/Navbar.jsx",
+      name: "navigation",
+      instructions: `
 Create a responsive website navigation component.
 
 Requirements:
@@ -151,14 +199,11 @@ Requirements:
 - Keep the component concise, around 60-100 lines.
 - Do not import other local components.
 `,
-  });
-
-  console.log("Nexora: Generating Hero.jsx");
-
-  const heroCode = await generateSourceFile({
-    context,
-    filePath: "src/components/Hero.jsx",
-    instructions: `
+    },
+    {
+      filePath: "src/components/Hero.jsx",
+      name: "hero section",
+      instructions: `
 Create an attractive, professional website hero component.
 
 Requirements:
@@ -170,14 +215,11 @@ Requirements:
 - Keep the component concise, around 70-120 lines.
 - Do not import other local components.
 `,
-  });
-
-  console.log("Nexora: Generating Sections.jsx");
-
-  const sectionsCode = await generateSourceFile({
-    context,
-    filePath: "src/components/Sections.jsx",
-    instructions: `
+    },
+    {
+      filePath: "src/components/Sections.jsx",
+      name: "website content sections",
+      instructions: `
 Create the main content sections for this website.
 
 Requirements:
@@ -190,14 +232,11 @@ Requirements:
 - Do not create another navigation, hero or footer.
 - Do not import other local components.
 `,
-  });
-
-  console.log("Nexora: Generating Footer.jsx");
-
-  const footerCode = await generateSourceFile({
-    context,
-    filePath: "src/components/Footer.jsx",
-    instructions: `
+    },
+    {
+      filePath: "src/components/Footer.jsx",
+      name: "website footer",
+      instructions: `
 Create a professional website footer.
 
 Requirements:
@@ -209,11 +248,71 @@ Requirements:
 - Keep the component concise, around 50-80 lines.
 - Do not import other local components.
 `,
+    },
+  ];
+
+  await reportProgress({
+    step: 2,
+    stage: "preparing_structure",
+    message: "Website component specifications prepared",
+    status: "completed",
   });
 
-  console.log("Nexora: Generating index.css");
+  // STEP 3: Generate React components.
+  const componentCodes = {};
 
-  // Extract CSS class names from the generated React components.
+  for (const specification of componentSpecifications) {
+    await reportProgress({
+      step: 3,
+      stage: "generating_components",
+      message: `Generating ${specification.name}`,
+      status: "started",
+      filePath: specification.filePath,
+    });
+
+    console.log(`Nexora: Generating ${specification.filePath}`);
+
+    const generatedCode = await generateSourceFile({
+      context,
+      filePath: specification.filePath,
+      instructions: specification.instructions,
+    });
+
+    componentCodes[specification.filePath] = generatedCode;
+
+    await reportProgress({
+      step: 3,
+      stage: "generating_components",
+      message: `Successfully generated ${specification.name}`,
+      status: "file_completed",
+      filePath: specification.filePath,
+    });
+  }
+
+  const navbarCode = componentCodes["src/components/Navbar.jsx"];
+
+  const heroCode = componentCodes["src/components/Hero.jsx"];
+
+  const sectionsCode = componentCodes["src/components/Sections.jsx"];
+
+  const footerCode = componentCodes["src/components/Footer.jsx"];
+
+  await reportProgress({
+    step: 3,
+    stage: "generating_components",
+    message: "All four website components generated",
+    status: "completed",
+  });
+
+  // STEP 4: Generate global CSS.
+  await reportProgress({
+    step: 4,
+    stage: "generating_styles",
+    message: "Preparing global stylesheet",
+    status: "started",
+  });
+
+  // Extract CSS class names from generated components.
   const extractClassNames = (code) => {
     const matches = [
       ...code.matchAll(/className=["']([^"']+)["']/g),
@@ -239,13 +338,23 @@ Requirements:
     componentClassNames: classNames,
   });
 
+  await reportProgress({
+    step: 4,
+    stage: "generating_styles",
+    message: "Generating responsive global CSS",
+    status: "started",
+    filePath: "src/index.css",
+  });
+
   const cssCode = await generateSourceFile({
     context: cssContext,
     filePath: "src/index.css",
     maxTokens: 5000,
+
     reasoning: {
       effort: "none",
     },
+
     instructions: `
 Generate a compact, complete global CSS stylesheet.
 
@@ -272,8 +381,9 @@ Rules:
 `,
   });
 
-  // Validate generated CSS before accepting the project.
+  // Validate generated CSS.
   const cssOpenBraces = (cssCode.match(/{/g) || []).length;
+
   const cssCloseBraces = (cssCode.match(/}/g) || []).length;
 
   if (cssOpenBraces !== cssCloseBraces) {
@@ -283,6 +393,21 @@ Rules:
   if (!cssCode.includes("body") || !cssCode.includes("box-sizing")) {
     throw new Error("Generated CSS is missing required global styles.");
   }
+
+  await reportProgress({
+    step: 4,
+    stage: "generating_styles",
+    message: "Global stylesheet generated and validated",
+    status: "completed",
+  });
+
+  // STEP 5: Assemble React application.
+  await reportProgress({
+    step: 5,
+    stage: "assembling_application",
+    message: "Assembling React application",
+    status: "started",
+  });
 
   // Create the application entry component ourselves.
   const appCode = `
@@ -324,6 +449,7 @@ createRoot(document.getElementById("root")).render(
   const generatedProject = {
     message: "Website generated successfully",
     entryFile: "src/App.jsx",
+
     files: [
       {
         path: "src/main.jsx",
@@ -356,8 +482,23 @@ createRoot(document.getElementById("root")).render(
     ],
   };
 
-  // Validate generated files.
+  await reportProgress({
+    step: 5,
+    stage: "assembling_application",
+    message: "React application files assembled",
+    status: "completed",
+  });
+
+  // STEP 6: Validate complete generated project.
+  await reportProgress({
+    step: 6,
+    stage: "validating_project",
+    message: "Validating generated project files",
+    status: "started",
+  });
+
   const allowedPath = /^src\/[a-zA-Z0-9_./-]+$/;
+
   const filePaths = new Set();
 
   let totalSize = 0;
@@ -368,7 +509,7 @@ createRoot(document.getElementById("root")).render(
       typeof file.content !== "string" ||
       !file.content.trim()
     ) {
-      throw new Error("Generated project contains an invalid file");
+      throw new Error("Generated project contains an invalid file.");
     }
 
     if (
@@ -388,12 +529,28 @@ createRoot(document.getElementById("root")).render(
     }
 
     filePaths.add(file.path);
+
     totalSize += file.content.length;
   }
 
   if (totalSize > 100000) {
-    throw new Error("Generated project exceeds the allowed size");
+    throw new Error("Generated project exceeds the allowed size.");
   }
+
+  if (!filePaths.has("src/App.jsx")) {
+    throw new Error("Generated project is missing src/App.jsx.");
+  }
+
+  if (!filePaths.has("src/main.jsx")) {
+    throw new Error("Generated project is missing src/main.jsx.");
+  }
+
+  await reportProgress({
+    step: 6,
+    stage: "validating_project",
+    message: "All generated project files validated successfully",
+    status: "completed",
+  });
 
   console.log(
     `Nexora: Successfully generated ${generatedProject.files.length} files.`,

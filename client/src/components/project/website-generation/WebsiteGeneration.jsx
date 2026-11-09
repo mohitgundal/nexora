@@ -5,7 +5,10 @@ import { ArrowLeft, ArrowRight, RefreshCw } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useProject } from "../../../context/ProjectContext";
 
-import { generateWebsite } from "../../../services/generationService";
+import {
+  generateWebsite,
+  pollGenerationProgress,
+} from "../../../services/generationService";
 
 import GenerationHeader from "./GenerationHeader";
 import GenerationSteps from "./GenerationSteps";
@@ -21,14 +24,16 @@ const WebsiteGeneration = () => {
   const project = getProjectById(projectId);
   const requirements = project?.requirements;
 
-  const [currentStep, setCurrentStep] = useState(0);
-
   const [generationPhase, setGenerationPhase] = useState("generating");
-
+  const [generationProgress, setGenerationProgress] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
 
   const generationStartedRef = useRef(false);
+  const stopPollingRef = useRef(null);
 
+  const currentStep = generationProgress?.step || 0;
+
+  // Navigation handlers.
   const handleBack = () => {
     navigate(`/project/${projectId}/plan`);
   };
@@ -37,25 +42,77 @@ const WebsiteGeneration = () => {
     navigate(`/project/${projectId}/builder`);
   };
 
+  // Stop the active polling session.
+  const stopProgressPolling = () => {
+    if (stopPollingRef.current) {
+      stopPollingRef.current();
+      stopPollingRef.current = null;
+    }
+  };
+
+  // Start backend progress polling.
+  const startProgressPolling = () => {
+    stopProgressPolling();
+
+    stopPollingRef.current = pollGenerationProgress(
+      projectId,
+
+      // Receive actual backend progress.
+      (response) => {
+        const progress = response.generationProgress;
+
+        if (progress) {
+          setGenerationProgress(progress);
+        }
+
+        // Handle backend generation failure.
+        if (response.generationStatus === "failed") {
+          setErrorMessage(
+            progress?.error ||
+              progress?.message ||
+              "Website generation failed.",
+          );
+
+          setGenerationPhase("error");
+        }
+      },
+
+      // A polling error is not necessarily a generation failure.
+      (error) => {
+        console.error("Generation progress polling failed:", error);
+
+        setErrorMessage(
+          error.message || "Unable to retrieve the latest generation progress.",
+        );
+
+        // Keep the generation request protected against duplicates.
+        // The actual generation request determines success or failure.
+      },
+    );
+  };
+
+  // Start website generation.
   const startGeneration = async () => {
-    // Prevent duplicate requests.
-
-    console.log("START GENERATION FUNCTION CALLED");
-
     if (generationStartedRef.current) {
       return;
     }
 
     generationStartedRef.current = true;
 
+    stopProgressPolling();
+
     setGenerationPhase("generating");
+    setGenerationProgress(null);
     setErrorMessage("");
-    setCurrentStep(0);
+
+    // Initiate the generation request first.
+    const generationRequest = generateWebsite(projectId);
+
+    // Poll independently while the backend generates the website.
+    startProgressPolling();
 
     try {
-      // Call the actual backend generation API.
-
-      const response = await generateWebsite(projectId);
+      const response = await generationRequest;
 
       if (
         !response.success ||
@@ -68,24 +125,27 @@ const WebsiteGeneration = () => {
         );
       }
 
-      // Synchronize the generated project with frontend context.
-      // This ensures WebsiteBuilder receives the generated files.
+      // Stop polling after successful generation.
+      stopProgressPolling();
 
+      // Synchronize generated files with ProjectContext.
       await updateProject(projectId, {
         builder: response.builder,
         code: response.builder.code,
         generationStatus: "completed",
+        generationProgress: response.generationProgress,
       });
 
-      // Mark all generation steps as completed.
-
-      setCurrentStep(6);
+      // Apply final backend progress.
+      if (response.generationProgress) {
+        setGenerationProgress(response.generationProgress);
+      }
 
       setGenerationPhase("complete");
-
-      generationStartedRef.current = true;
     } catch (error) {
       console.error("Website generation failed:", error);
+
+      stopProgressPolling();
 
       setErrorMessage(
         error.message || "Something went wrong while generating your website.",
@@ -93,26 +153,18 @@ const WebsiteGeneration = () => {
 
       setGenerationPhase("error");
 
-      // Allow the user to retry.
-
+      // Allow retry after the generation request has failed.
       generationStartedRef.current = false;
     }
   };
 
+  // Initialize generation and manage polling lifecycle.
   useEffect(() => {
-    console.log("GENERATION USEEFFECT RUNNING");
-
-    console.log("PROJECT:", project);
-    console.log("REQUIREMENTS:", requirements);
-    console.log("PLAN:", project?.plan);
-    console.log("GENERATION STATUS:", project?.generationStatus);
-
     if (!project || !requirements || !project.plan) {
       return;
     }
 
-    // If a generated project already exists, do not generate again.
-
+    // Reuse an already generated website.
     const existingFiles = project.builder?.files;
 
     if (
@@ -122,16 +174,35 @@ const WebsiteGeneration = () => {
     ) {
       generationStartedRef.current = true;
 
-      setCurrentStep(6);
+      setGenerationProgress(
+        project.generationProgress || {
+          stage: "completed",
+          step: 6,
+          totalSteps: 6,
+          completedSteps: [1, 2, 3, 4, 5, 6],
+          message: "Website generated successfully",
+        },
+      );
+
       setGenerationPhase("complete");
 
       return;
     }
 
-    startGeneration();
-    console.log("CALLING START GENERATION");
+    // React StrictMode can execute effect cleanup and setup again.
+    // Resume polling without submitting another generation request.
+    if (generationStartedRef.current) {
+      startProgressPolling();
+    } else {
+      startGeneration();
+    }
+
+    return () => {
+      stopProgressPolling();
+    };
   }, [projectId, Boolean(project?.requirements), Boolean(project?.plan)]);
 
+  // Validate project setup.
   if (!project || !requirements || !project.plan) {
     return (
       <main className="min-h-screen bg-black px-4 py-10 text-white">
@@ -185,9 +256,13 @@ const WebsiteGeneration = () => {
         {/* Generation Content */}
 
         <div className="mt-14 grid gap-10 lg:grid-cols-[1fr_0.9fr]">
-          {/* Steps */}
+          {/* Backend-driven Steps */}
 
-          <GenerationSteps currentStep={currentStep} />
+          <GenerationSteps
+            currentStep={currentStep}
+            progress={generationProgress}
+            generationPhase={generationPhase}
+          />
 
           {/* Preview */}
 
@@ -227,10 +302,24 @@ const WebsiteGeneration = () => {
                   <div className="mt-6 flex items-center gap-2">
                     <span className="size-1.5 animate-pulse rounded-full bg-purple-400" />
 
-                    <span className="text-xs text-white/30">
-                      Generating React project files
+                    <span className="text-xs text-purple-300">
+                      {generationProgress?.message ||
+                        "Waiting for generation progress..."}
                     </span>
                   </div>
+
+                  {generationProgress && (
+                    <p className="mt-3 text-xs text-white/30">
+                      Step {generationProgress.step || 0} of{" "}
+                      {generationProgress.totalSteps || 6}
+                    </p>
+                  )}
+
+                  {errorMessage && (
+                    <p className="mt-3 text-xs text-red-300/80">
+                      {errorMessage}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

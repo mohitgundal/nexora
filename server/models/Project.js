@@ -54,12 +54,61 @@ const projectSchema = new mongoose.Schema(
 
     generationStatus: {
       type: String,
+      enum: ["draft", "generating", "completed", "failed"],
       default: "draft",
+    },
+
+    // Tracks actual backend generation progress.
+    generationProgress: {
+      stage: {
+        type: String,
+        default: "idle",
+      },
+
+      step: {
+        type: Number,
+        default: 0,
+      },
+
+      totalSteps: {
+        type: Number,
+        default: 6,
+      },
+
+      message: {
+        type: String,
+        default: "Waiting for generation",
+      },
+
+      completedSteps: {
+        type: [Number],
+        default: [],
+      },
+
+      startedAt: {
+        type: Date,
+        default: null,
+      },
+
+      updatedAt: {
+        type: Date,
+        default: null,
+      },
+
+      completedAt: {
+        type: Date,
+        default: null,
+      },
+
+      error: {
+        type: String,
+        default: null,
+      },
     },
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 module.exports = mongoose.model("Project", projectSchema);
