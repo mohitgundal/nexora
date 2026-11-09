@@ -15,6 +15,7 @@ const app = express();
 const allowedOrigins = [
   "http://localhost:5173",
   process.env.FRONTEND_URL,
+  "https://nexora-11mor3paz-mohitgundal21-6549.vercel.app",
 ]
   .filter(Boolean)
   .map((origin) => origin.trim().replace(/\/+$/, ""));
@@ -42,7 +43,7 @@ app.use(
       return callback(null, false);
     },
     credentials: true,
-  })
+  }),
 );
 
 app.use(express.json());
