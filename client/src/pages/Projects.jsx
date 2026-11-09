@@ -11,9 +11,7 @@ const Projects = () => {
     return (
       <main className="min-h-screen bg-[#050506] text-white">
         <div className="mx-auto max-w-7xl px-6 py-12">
-          <p className="text-white/50">
-            Loading projects...
-          </p>
+          <p className="text-white/50">Loading projects...</p>
         </div>
       </main>
     );
@@ -22,13 +20,10 @@ const Projects = () => {
   return (
     <main className="min-h-screen bg-[#050506] text-white">
       <div className="mx-auto max-w-7xl px-6 py-10 lg:px-8">
-
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-purple-400">
-              NEXORA
-            </p>
+            <p className="text-sm text-purple-400">NEXORA</p>
 
             <h1 className="mt-2 text-3xl font-bold tracking-tight">
               My Projects
@@ -50,12 +45,9 @@ const Projects = () => {
 
         {/* Projects */}
         <div className="mt-10">
-
           {projects.length === 0 ? (
             <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-6 py-16 text-center">
-              <h2 className="text-xl font-semibold">
-                No projects yet
-              </h2>
+              <h2 className="text-xl font-semibold">No projects yet</h2>
 
               <p className="mt-2 text-sm text-white/40">
                 Create your first website with Nexora.
@@ -73,14 +65,12 @@ const Projects = () => {
               {projects.map((project) => (
                 <Link
                   key={project._id}
-                  to={`/project/${project._id}/requirements`}
+                  to={`/project/${project._id}/builder`}
                   className="group rounded-2xl border border-white/10 bg-white/[0.03] p-6 transition hover:border-purple-400/30 hover:bg-white/[0.05]"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <h2 className="font-semibold">
-                        {project.name}
-                      </h2>
+                      <h2 className="font-semibold">{project.name}</h2>
 
                       <p className="mt-1 text-xs text-white/35">
                         {project.type}
@@ -105,7 +95,6 @@ const Projects = () => {
               ))}
             </div>
           )}
-
         </div>
       </div>
     </main>
