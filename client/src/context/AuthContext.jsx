@@ -1,9 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 
-import {
-  getCurrentUser,
-  logoutUser,
-} from "../services/authService";
+import { getCurrentUser, logoutUser } from "../services/authService";
 
 export const AuthContext = createContext(null);
 
@@ -15,7 +12,6 @@ const AuthProvider = ({ children }) => {
     const checkAuth = async () => {
       try {
         const data = await getCurrentUser();
-
         setUser(data.user);
       } catch (error) {
         setUser(null);
@@ -27,13 +23,12 @@ const AuthProvider = ({ children }) => {
     checkAuth();
   }, []);
 
+  // Logout
   const logout = async () => {
-    try {
-      await logoutUser();
-      setUser(null);
-    } catch (error) {
-      console.error("Logout failed:", error);
-    }
+    await logoutUser();
+
+    // Clear frontend authentication only after API success.
+    setUser(null);
   };
 
   const value = {
@@ -44,11 +39,7 @@ const AuthProvider = ({ children }) => {
     isAuthenticated: Boolean(user),
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {

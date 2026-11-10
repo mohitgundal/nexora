@@ -2,8 +2,9 @@ import React from "react";
 import {
   ArrowLeft,
   Cloud,
+  Code2,
   Eye,
-  History,
+  MessageSquare,
   Rocket,
 } from "lucide-react";
 
@@ -11,80 +12,100 @@ const BuilderHeader = ({
   project,
   activeView,
   setActiveView,
+  saveStatus = "saved",
   onBack,
   onDeploy,
+  onToggleChat,
 }) => {
+  const saveLabels = {
+    saved: "All changes saved",
+    unsaved: "Unsaved changes",
+    saving: "Saving changes...",
+    error: "Save failed",
+  };
+
+  const saveColor =
+    saveStatus === "error"
+      ? "text-red-400"
+      : saveStatus === "saved"
+        ? "text-green-400"
+        : "text-amber-400";
+
+  const tabClasses = (isActive) =>
+    `inline-flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-medium transition sm:px-3 ${
+      isActive ? "bg-white text-black" : "text-white/50 hover:text-white"
+    }`;
+
   return (
-    <header className="flex min-h-16 items-center justify-between gap-4 border-b border-white/10 bg-[#08080a] px-4 sm:px-6">
-      
-      {/* Left */}
-      <div className="flex min-w-0 items-center gap-4">
+    <header className="relative z-30 flex min-h-14 shrink-0 items-center justify-between gap-2 border-b border-white/10 bg-[#08080a] px-2.5 sm:min-h-16 sm:gap-3 sm:px-5">
+      {/* Left: Back, project name and history */}
+      <div className="flex min-w-0 flex-1 items-center gap-2 sm:flex-none sm:gap-3">
         <button
           type="button"
           onClick={onBack}
-          className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-white/10 text-white/40 transition hover:border-white/20 hover:bg-white/[0.04] hover:text-white"
-          title="Back"
+          title="Back to project"
+          className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-white/10 text-white/55 transition hover:bg-white/[0.06] hover:text-white"
         >
-          <ArrowLeft className="size-4" />
+          <ArrowLeft size={16} />
+        </button>
+
+        {/* AI Chat Toggle */}
+        <button
+          type="button"
+          onClick={onToggleChat}
+          title="Toggle AI chat"
+          aria-label="Toggle AI chat"
+          className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-white/10 text-white/55 transition hover:bg-white/[0.06] hover:text-white"
+        >
+          <MessageSquare size={17} />
         </button>
 
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-white">
-            {project.name}
+          <p className="max-w-[100px] truncate text-xs font-medium text-white sm:max-w-[150px] sm:text-sm lg:max-w-none">
+            {project?.name || "Untitled Project"}
           </p>
 
-          <div className="mt-0.5 flex items-center gap-1.5">
-            <Cloud className="size-3 text-green-400" />
+          <div className="mt-0.5 hidden items-center gap-1.5 sm:flex">
+            <Cloud size={12} className={saveColor} />
 
-            <span className="text-xs text-white/35">
-              Saved locally
+            <span className="truncate text-xs text-white/40">
+              {saveLabels[saveStatus] || "Project workspace"}
             </span>
           </div>
         </div>
       </div>
 
-      {/* Center Navigation */}
-      <div className="hidden items-center gap-1 rounded-xl border border-white/10 bg-white/[0.03] p-1 md:flex">
+      {/* Center: Preview / Code */}
+      <div className="flex shrink-0 items-center gap-1 rounded-xl border border-white/10 bg-white/[0.035] p-1">
         <button
           type="button"
-          onClick={() => setActiveView("preview")}
-          className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs transition ${
-            activeView === "preview"
-              ? "bg-white text-black"
-              : "text-white/45 hover:text-white"
-          }`}
+          onClick={() => setActiveView("build")}
+          className={tabClasses(activeView === "build")}
         >
-          <Eye className="size-3.5" />
-          Preview
+          <Eye size={14} />
+          <span>Preview</span>
         </button>
 
         <button
           type="button"
-          onClick={() => setActiveView("history")}
-          className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs transition ${
-            activeView === "history"
-              ? "bg-white text-black"
-              : "text-white/45 hover:text-white"
-          }`}
+          onClick={() => setActiveView("code")}
+          className={tabClasses(activeView === "code")}
         >
-          <History className="size-3.5" />
-          History
+          <Code2 size={14} />
+          <span>Code</span>
         </button>
       </div>
 
-      {/* Right */}
+      {/* Right: Deploy */}
       <button
         type="button"
         onClick={onDeploy}
-        className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-white px-4 py-2 text-xs font-semibold text-black transition hover:bg-gray-200"
+        title="Deploy project"
+        className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-white text-black transition hover:bg-gray-200 sm:h-auto sm:w-auto sm:gap-2 sm:px-4 sm:py-2.5"
       >
-        <Rocket className="size-3.5" />
-
-        <span className="hidden sm:inline">
-          Deploy
-        </span>
+        <Rocket size={15} />
+        <span className="hidden text-xs font-semibold sm:inline">Deploy</span>
       </button>
-
     </header>
   );
 };

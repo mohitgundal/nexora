@@ -141,19 +141,10 @@
 }
 
 
+
 /* Nexora: Sandpack preview height fix */
 
-#nexora-live-preview {
-  height: 100%;
-  min-height: 0;
-}
-
-#nexora-live-preview > div {
-  height: 100% !important;
-  min-height: 0 !important;
-}
-
-#nexora-live-preview .sp-wrapper {
+.sp-wrapper {
   display: flex !important;
   flex-direction: column !important;
   width: 100% !important;
@@ -162,7 +153,7 @@
   flex: 1 1 auto !important;
 }
 
-#nexora-live-preview .sp-preview {
+.sp-wrapper .sp-preview {
   display: flex !important;
   flex-direction: column !important;
   width: 100% !important;
@@ -171,13 +162,13 @@
   flex: 1 1 auto !important;
 }
 
-#nexora-live-preview .sp-preview-container {
+.sp-wrapper .sp-preview-container {
   height: 100% !important;
   min-height: 0 !important;
   flex: 1 1 auto !important;
 }
 
-#nexora-live-preview iframe.sp-preview-iframe {
+.sp-wrapper iframe.sp-preview-iframe {
   display: block !important;
   width: 100% !important;
   height: 100% !important;

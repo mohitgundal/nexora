@@ -1,5 +1,14 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { SandpackProvider } from "@codesandbox/sandpack-react";
+import {
+  FileCode2,
+  FolderOpen,
+  History,
+  MessageSquarePlus,
+  PanelLeftClose,
+  PanelLeftOpen,
+  X,
+} from "lucide-react";
 
 import AIChat from "./AIChat";
 import CodeEditor from "./CodeEditor";
@@ -21,7 +30,6 @@ const createSandpackFiles = (files) => {
 
     if (typeof file.content !== "string") return;
 
-    // Include frontend source files, public assets and project configuration.
     const isFrontendFile =
       path.startsWith("src/") ||
       path.startsWith("public/") ||
@@ -29,8 +37,6 @@ const createSandpackFiles = (files) => {
       path === "index.html";
 
     if (!isFrontendFile) return;
-
-    // Do not expose environment files or secrets in the browser preview.
     if (path === ".env" || path.startsWith(".env.")) return;
 
     sandpackFiles[`/${path}`] = {
@@ -39,8 +45,6 @@ const createSandpackFiles = (files) => {
     };
   });
 
-  // Sandpack's React template uses src/index.js as its entry point.
-  // Reuse the generated main.jsx when it exists.
   if (sandpackFiles["/src/main.jsx"]) {
     sandpackFiles["/src/index.js"] = {
       code: sandpackFiles["/src/main.jsx"].code,
@@ -48,7 +52,6 @@ const createSandpackFiles = (files) => {
     };
   }
 
-  // If the generated project has App.jsx but no entry file, create one.
   if (!sandpackFiles["/src/index.js"] && sandpackFiles["/src/App.jsx"]) {
     sandpackFiles["/src/index.js"] = {
       code: `
@@ -72,8 +75,6 @@ createRoot(document.getElementById("root")).render(
 
 const BuilderWorkspace = ({
   project,
-  requirements,
-  websiteData,
   activeView,
   saveStatus,
   code,
@@ -84,7 +85,16 @@ const BuilderWorkspace = ({
   files = [],
   activeFile = "",
   onSelectFile = () => {},
+  conversations = [],
+  activeConversation,
+  onSelectConversation,
+  onNewConversation,
+  onConversationMessagesChange,
+  chatOpen,
+  onToggleChat,
 }) => {
+  const [codeSidebarView, setCodeSidebarView] = useState("files");
+
   const sandpackFiles = useMemo(() => createSandpackFiles(files), [files]);
 
   return (
@@ -106,45 +116,123 @@ const BuilderWorkspace = ({
         recompileDelay: 500,
       }}
     >
-      <div className="grid h-full min-h-0 lg:grid-cols-[320px_minmax(0,1fr)]">
-        {/* AI Chat / Version History */}
-        <div className="hidden min-h-0 lg:block">
-          {activeView === "history" ? (
-            <VersionHistory
-              versions={versions}
-              onRestoreVersion={onRestoreVersion}
-            />
-          ) : (
-            <AIChat project={project} onAIAction={onAIAction} />
+      <div className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-[#08080a]">
+        {/* MAIN WORKSPACE */}
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          {/* BUILD MODE — DESKTOP */}
+          {activeView === "build" && (
+            <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
+              {/* AI CHAT SIDEBAR */}
+              <aside
+                className={`${
+                  chatOpen ? "flex w-[360px] shrink-0" : "hidden w-0"
+                } min-h-0 flex-col overflow-hidden border-r border-white/10 bg-[#0d0d10]`}
+              >
+                <AIChat
+                  project={project}
+                  conversation={activeConversation}
+                  onMessagesChange={onConversationMessagesChange}
+                  onAIAction={onAIAction}
+                />
+              </aside>
+
+              {/* FULL-SIZE WEBSITE PREVIEW */}
+              <main className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#08090d]">
+                <div className="flex min-h-0 flex-1 overflow-hidden">
+                  <LivePreview files={files} />
+                </div>
+              </main>
+            </div>
           )}
-        </div>
 
-        {/* Explorer, Editor and Preview */}
-        <div className="grid h-full min-h-0 min-w-0 lg:grid-cols-[200px_minmax(0,1fr)]">
-          <div className="hidden min-h-0 lg:block">
-            <FileExplorer
-              files={files}
-              activeFile={activeFile}
-              onSelectFile={onSelectFile}
-            />
-          </div>
+          {/* CODE MODE */}
+          {activeView === "code" && (
+            <div className="flex min-h-0 flex-1 flex-col p-3 sm:p-4">
+              <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-sm font-semibold text-white">
+                    Code workspace
+                  </h2>
+                  <p className="mt-1 text-[11px] text-white/35">
+                    Inspect and edit your generated project files
+                  </p>
+                </div>
 
-          <div className="grid h-full min-h-0 min-w-0 lg:grid-rows-[minmax(110px,0.65fr)_minmax(0,1.8fr)]">
-            {/* Code Editor */}
-            <div className="min-h-0 min-w-0 border-b border-white/10">
-              <CodeEditor
-                code={code}
-                onChange={onCodeChange}
-                activeFile={activeFile}
-                saveStatus={saveStatus}
-              />
+                <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.03] p-1">
+                  <button
+                    type="button"
+                    onClick={() => setCodeSidebarView("files")}
+                    className={`flex items-center gap-1.5 rounded-md px-2.5 py-2 text-[11px] ${
+                      codeSidebarView === "files"
+                        ? "bg-white text-black"
+                        : "text-white/50 hover:text-white"
+                    }`}
+                  >
+                    <FolderOpen size={13} />
+                    Files
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCodeSidebarView("versions")}
+                    className={`flex items-center gap-1.5 rounded-md px-2.5 py-2 text-[11px] ${
+                      codeSidebarView === "versions"
+                        ? "bg-white text-black"
+                        : "text-white/50 hover:text-white"
+                    }`}
+                  >
+                    <History size={13} />
+                    Versions
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid min-h-0 flex-1 overflow-hidden rounded-xl border border-white/10 lg:grid-cols-[230px_minmax(0,1fr)]">
+                <aside className="hidden min-h-0 border-r border-white/10 bg-[#0d0d10] sm:block">
+                  {codeSidebarView === "files" ? (
+                    <FileExplorer
+                      files={files}
+                      activeFile={activeFile}
+                      onSelectFile={onSelectFile}
+                    />
+                  ) : (
+                    <VersionHistory
+                      versions={versions}
+                      onRestoreVersion={onRestoreVersion}
+                    />
+                  )}
+                </aside>
+
+                <div className="min-h-0 min-w-0 overflow-hidden">
+                  <CodeEditor
+                    code={code}
+                    onChange={onCodeChange}
+                    activeFile={activeFile}
+                    saveStatus={saveStatus}
+                  />
+                </div>
+              </div>
+
+              {/* Mobile file / version selector */}
+              <div className="mt-2 flex gap-2 sm:hidden">
+                {files.map((file) => (
+                  <button
+                    key={file.path}
+                    type="button"
+                    onClick={() => onSelectFile(file.path)}
+                    className={`max-w-[48%] truncate rounded-lg border px-3 py-2 text-[10px] ${
+                      activeFile === file.path
+                        ? "border-purple-400/40 bg-purple-400/10 text-purple-200"
+                        : "border-white/10 text-white/50"
+                    }`}
+                  >
+                    <FileCode2 size={11} className="mr-1 inline" />
+                    {file.path.split("/").pop()}
+                  </button>
+                ))}
+              </div>
             </div>
-
-            {/* Live Preview */}
-            <div className="min-h-0 min-w-0 overflow-hidden">
-              <LivePreview files={files} />
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </SandpackProvider>

@@ -1,5 +1,5 @@
-import React from "react";
-import { Link, useLocation } from "react-router-dom";
+import React, { useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import {
   LayoutDashboard,
@@ -10,8 +10,16 @@ import {
   X,
 } from "lucide-react";
 
+import { useAuth } from "../../context/AuthContext";
+
 const DashboardSidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const { logout } = useAuth();
+
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
 
   const menuItems = [
     {
@@ -26,8 +34,32 @@ const DashboardSidebar = ({ isOpen, onClose }) => {
     },
   ];
 
+  const handleLogout = async () => {
+    if (isLoggingOut) return;
+
+    setIsLoggingOut(true);
+    setLogoutError("");
+
+    try {
+      await logout();
+
+      onClose?.();
+
+      navigate("/login", {
+        replace: true,
+      });
+    } catch (error) {
+      console.error("Logout failed:", error);
+
+      setLogoutError(error.message || "Unable to log out. Please try again.");
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
+
   return (
     <aside
+      id="dashboard-sidebar"
       className={`fixed inset-y-0 left-0 z-50 flex h-screen w-72 shrink-0 flex-col overflow-y-auto border-r border-white/10 bg-[#08080a] p-5 transition-transform duration-300 lg:sticky lg:top-0 lg:z-auto lg:translate-x-0 ${
         isOpen ? "translate-x-0" : "-translate-x-full"
       }`}
@@ -44,7 +76,6 @@ const DashboardSidebar = ({ isOpen, onClose }) => {
           <span className="text-xl font-bold tracking-tight">Nexora</span>
         </Link>
 
-        {/* Mobile Close Button */}
         <button
           type="button"
           onClick={onClose}
@@ -90,16 +121,38 @@ const DashboardSidebar = ({ isOpen, onClose }) => {
         })}
       </nav>
 
-      {/* Bottom */}
+      {/* Bottom Navigation */}
       <div className="mt-auto space-y-2 pt-8">
-        <button className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm text-white/50 transition hover:bg-white/[0.04] hover:text-white">
+        <Link
+          to="/settings"
+          onClick={onClose}
+          className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm transition ${
+            location.pathname === "/settings"
+              ? "bg-purple-500/10 text-purple-300"
+              : "text-white/50 hover:bg-white/[0.04] hover:text-white"
+          }`}
+        >
           <Settings className="size-4" />
           Settings
-        </button>
+        </Link>
 
-        <button className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm text-red-400/80 transition hover:bg-red-500/10 hover:text-red-400">
+        {/* Logout Error */}
+        {logoutError && (
+          <p role="alert" className="px-3 text-xs leading-5 text-red-400">
+            {logoutError}
+          </p>
+        )}
+
+        {/* Logout Button */}
+        <button
+          type="button"
+          onClick={handleLogout}
+          disabled={isLoggingOut}
+          className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm text-red-400/80 transition hover:bg-red-500/10 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-50"
+        >
           <LogOut className="size-4" />
-          Log out
+
+          {isLoggingOut ? "Logging out..." : "Log out"}
         </button>
       </div>
     </aside>

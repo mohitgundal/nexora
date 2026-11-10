@@ -27,18 +27,41 @@ import BuilderWorkspace from "./BuilderWorkspace";
 
 import { sendBuilderRequest } from "../../../services/builderService";
 
+const createInitialConversation = (projectName) => ({
+  id: crypto.randomUUID(),
+  title: "New conversation",
+  createdAt: new Date().toISOString(),
+  messages: [
+    {
+      id: crypto.randomUUID(),
+      role: "assistant",
+      content: `Your website for ${projectName} is ready. Ask me to change its design, content, sections, or functionality.`,
+      createdAt: new Date().toISOString(),
+    },
+  ],
+});
+
 const WebsiteBuilder = () => {
   const navigate = useNavigate();
 
   const { projectId } = useParams();
   const [saveStatus, setSaveStatus] = useState("saved");
 
-  const { getProjectById, saveBuilder } = useProject();
+  const { getProjectById, saveBuilder, loading } = useProject();
 
   const project = getProjectById(projectId);
   const requirements = project?.requirements;
 
-  const [activeView, setActiveView] = useState("preview");
+  const [activeView, setActiveView] = useState("build");
+
+  const [conversations, setConversations] = useState([]);
+  const [activeConversationId, setActiveConversationId] = useState("");
+
+  const [historyOpen, setHistoryOpen] = useState(
+    () => window.matchMedia("(min-width: 1024px)").matches,
+  );
+
+  const [chatOpen, setChatOpen] = useState(false);
 
   const [code, setCode] = useState("");
   const [websiteData, setWebsiteData] = useState(null);
@@ -53,18 +76,35 @@ const WebsiteBuilder = () => {
 
   const saveTimerRef = useRef(null);
   const pendingSaveRef = useRef(null);
+  const inFlightSaveRef = useRef(null);
 
   const flushPendingSave = async () => {
+    // Cancel the pending autosave timer.
     if (saveTimerRef.current) {
       clearTimeout(saveTimerRef.current);
       saveTimerRef.current = null;
     }
 
+    // Wait for a save that has already started.
+    if (inFlightSaveRef.current) {
+      await inFlightSaveRef.current;
+    }
+
+    // Save the latest pending changes.
     const pendingSave = pendingSaveRef.current;
+    pendingSaveRef.current = null;
 
     if (pendingSave) {
-      pendingSaveRef.current = null;
-      await pendingSave();
+      const savePromise = pendingSave();
+      inFlightSaveRef.current = savePromise;
+
+      try {
+        await savePromise;
+      } finally {
+        if (inFlightSaveRef.current === savePromise) {
+          inFlightSaveRef.current = null;
+        }
+      }
     }
   };
 
@@ -73,6 +113,15 @@ const WebsiteBuilder = () => {
     if (!project || !requirements) return;
 
     const savedBuilder = project.builder || {};
+
+    const savedConversations =
+      Array.isArray(savedBuilder.conversations) &&
+      savedBuilder.conversations.length > 0
+        ? savedBuilder.conversations
+        : [createInitialConversation(project.name)];
+
+    setConversations(savedConversations);
+    setActiveConversationId(savedConversations[0].id);
 
     // CASE 1: Load AI-generated project files
     if (Array.isArray(savedBuilder.files) && savedBuilder.files.length > 0) {
@@ -139,6 +188,7 @@ const WebsiteBuilder = () => {
       code: initialCode,
       websiteData: initialWebsiteData,
       versions: preparedVersions,
+      conversations: savedConversations,
     });
   }, [projectId, Boolean(project), Boolean(requirements)]);
 
@@ -153,12 +203,33 @@ const WebsiteBuilder = () => {
       pendingSaveRef.current = null;
 
       if (pendingSave) {
-        pendingSave().catch((error) => {
-          console.error("Nexora: Final save failed:", error);
-        });
+        const savePromise = pendingSave();
+        inFlightSaveRef.current = savePromise;
+
+        savePromise
+          .catch((error) => {
+            console.error("Nexora: Final save failed:", error);
+          })
+          .finally(() => {
+            if (inFlightSaveRef.current === savePromise) {
+              inFlightSaveRef.current = null;
+            }
+          });
       }
     };
   }, []);
+
+  if (loading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#08080a] text-white">
+        <div className="text-center">
+          <div className="mx-auto size-8 animate-spin rounded-full border-2 border-white/20 border-t-purple-400" />
+
+          <p className="mt-4 text-sm text-white/50">Loading your project...</p>
+        </div>
+      </main>
+    );
+  }
 
   if (!project || !requirements) {
     return (
@@ -199,8 +270,13 @@ const WebsiteBuilder = () => {
   }
 
   const handleBack = async () => {
-    await flushPendingSave();
-    navigate(`/project/${projectId}/generate`);
+    try {
+      await flushPendingSave();
+      navigate("/projects");
+    } catch (error) {
+      console.error("Unable to save before leaving Builder:", error);
+      setSaveStatus("error");
+    }
   };
 
   // Select a generated file
@@ -440,11 +516,18 @@ const WebsiteBuilder = () => {
         pendingSaveRef.current = null;
 
         if (pendingSave) {
+          const savePromise = pendingSave();
+          inFlightSaveRef.current = savePromise;
+
           try {
-            await pendingSave();
-            console.log("Nexora: File saved successfully.");
+            await savePromise;
+            console.log("Nexora: Project saved successfully.");
           } catch (error) {
-            console.error("Nexora: Failed to save file:", error);
+            console.error("Nexora: Failed to save project:", error);
+          } finally {
+            if (inFlightSaveRef.current === savePromise) {
+              inFlightSaveRef.current = null;
+            }
           }
         }
       }, 700);
@@ -466,11 +549,20 @@ const WebsiteBuilder = () => {
     }
 
     pendingSaveRef.current = async () => {
-      await saveBuilder(projectId, {
-        code: newCode,
-        websiteData: updatedWebsiteData,
-        versions,
-      });
+      setSaveStatus("saving");
+
+      try {
+        await saveBuilder(projectId, {
+          code: newCode,
+          websiteData: updatedWebsiteData,
+          versions,
+        });
+
+        setSaveStatus("saved");
+      } catch (error) {
+        setSaveStatus("error");
+        throw error;
+      }
     };
 
     saveTimerRef.current = setTimeout(async () => {
@@ -480,31 +572,107 @@ const WebsiteBuilder = () => {
       pendingSaveRef.current = null;
 
       if (pendingSave) {
+        const savePromise = pendingSave();
+        inFlightSaveRef.current = savePromise;
+
         try {
-          await pendingSave();
+          await savePromise;
+
           console.log("Nexora: Single-file project saved successfully.");
         } catch (error) {
           console.error("Nexora: Failed to save project:", error);
+        } finally {
+          if (inFlightSaveRef.current === savePromise) {
+            inFlightSaveRef.current = null;
+          }
         }
       }
     }, 700);
   };
 
+  const activeConversation =
+    conversations.find(
+      (conversation) => conversation.id === activeConversationId,
+    ) ||
+    conversations[0] ||
+    null;
+
+  const persistConversations = async (updatedConversations) => {
+    try {
+      await saveBuilder(projectId, {
+        ...(project.builder || {}),
+        files,
+        activeFile,
+        code,
+        websiteData,
+        versions,
+        conversations: updatedConversations,
+      });
+    } catch (error) {
+      console.error("Failed to save chat conversations:", error);
+    }
+  };
+
+  const handleConversationMessagesChange = (nextMessages) => {
+    const updatedConversations = conversations.map((conversation) => {
+      if (conversation.id !== activeConversationId) {
+        return conversation;
+      }
+
+      const firstUserMessage = nextMessages.find(
+        (message) => message.role === "user",
+      );
+
+      return {
+        ...conversation,
+        title:
+          conversation.title === "New conversation" && firstUserMessage
+            ? firstUserMessage.content.slice(0, 35)
+            : conversation.title,
+        messages: nextMessages,
+        updatedAt: new Date().toISOString(),
+      };
+    });
+
+    setConversations(updatedConversations);
+    persistConversations(updatedConversations);
+  };
+
+  const handleNewConversation = () => {
+    const newConversation = createInitialConversation(project.name);
+
+    const updatedConversations = [newConversation, ...conversations];
+
+    setConversations(updatedConversations);
+    setActiveConversationId(newConversation.id);
+
+    persistConversations(updatedConversations);
+  };
+
+  const handleSelectConversation = (conversationId) => {
+    setActiveConversationId(conversationId);
+
+    // Close the mobile history drawer after selecting a conversation.
+    if (window.matchMedia("(max-width: 1023px)").matches) {
+      setHistoryOpen(false);
+    }
+  };
+
   return (
-    <main className="flex h-screen flex-col overflow-hidden bg-[#08080a] text-white">
+    <main className="flex h-dvh min-h-0 flex-col overflow-hidden bg-[#08080a] text-white">
       <BuilderHeader
         project={project}
         activeView={activeView}
         setActiveView={setActiveView}
+        saveStatus={saveStatus}
         onBack={handleBack}
         onDeploy={handleDeploy}
+        onToggleChat={() => setChatOpen((previous) => !previous)}
       />
 
-      <div className="min-h-0 flex-1">
+      <div className="min-h-0 flex-1 overflow-hidden">
         <BuilderWorkspace
           project={project}
-          requirements={requirements}
-          websiteData={websiteData}
           activeView={activeView}
           code={code}
           onCodeChange={handleCodeChange}
@@ -512,9 +680,18 @@ const WebsiteBuilder = () => {
           versions={versions}
           onAIAction={handleAIAction}
           onRestoreVersion={handleRestoreVersion}
+          chatOpen={chatOpen}
+          onToggleChat={() => setChatOpen((previous) => !previous)}
           files={files}
           activeFile={activeFile}
           onSelectFile={handleSelectFile}
+          conversations={conversations}
+          activeConversation={activeConversation}
+          onSelectConversation={handleSelectConversation}
+          onNewConversation={handleNewConversation}
+          onConversationMessagesChange={handleConversationMessagesChange}
+          historyOpen={historyOpen}
+          onToggleHistory={() => setHistoryOpen((previous) => !previous)}
         />
       </div>
     </main>

@@ -1,52 +1,60 @@
 import React from "react";
+import { useLocation } from "react-router-dom";
+import { Menu, X } from "lucide-react";
 
-import { Bell, Search, Menu } from "lucide-react";
+const DashboardHeader = ({ onMenuClick, isSidebarOpen }) => {
+  const location = useLocation();
 
-const DashboardHeader = ({ onMenuClick }) => {
+  const pageDetails = {
+    "/dashboard": {
+      title: "Dashboard",
+      subtitle: "Your workspace at a glance.",
+    },
+    "/projects": {
+      title: "My Projects",
+      subtitle: "Manage and organize your websites.",
+    },
+    "/settings": {
+      title: "Settings",
+      subtitle: "Manage your account preferences.",
+    },
+  };
+
+  const currentPage = pageDetails[location.pathname] || {
+    title: "Workspace",
+    subtitle: "Build something extraordinary.",
+  };
+
   return (
-    <header className="flex min-w-0 items-center justify-between gap-3 border-b border-white/10 px-4 py-4 sm:px-6 sm:py-5 lg:px-10">
-      {/* Left Section */}
+    <header className="sticky top-0 z-30 flex min-h-[76px] items-center border-b border-white/10 bg-[#050506]/95 px-4 py-4 backdrop-blur-xl sm:px-6 lg:px-10">
       <div className="flex min-w-0 items-center gap-3">
-        {/* Mobile Menu */}
+        {/* Mobile Navigation */}
         <button
           type="button"
           onClick={onMenuClick}
-          aria-label="Open navigation menu"
-          className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-white/70 transition hover:bg-white/[0.06] lg:hidden"
+          aria-label={
+            isSidebarOpen ? "Close navigation menu" : "Open navigation menu"
+          }
+          aria-expanded={isSidebarOpen}
+          aria-controls="dashboard-sidebar"
+          className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-white/70 transition hover:bg-white/[0.08] hover:text-white lg:hidden"
         >
-          <Menu className="size-5" />
+          {isSidebarOpen ? (
+            <X className="size-5" />
+          ) : (
+            <Menu className="size-5" />
+          )}
         </button>
 
-        {/* Page Title */}
+        {/* Page Information */}
         <div className="min-w-0">
-          <p className="text-xs text-white/40 sm:text-sm">Workspace</p>
+          <h1 className="truncate text-lg font-semibold tracking-tight text-white sm:text-xl">
+            {currentPage.title}
+          </h1>
 
-          <h1 className="mt-1 text-xl font-semibold sm:text-2xl">Dashboard</h1>
-        </div>
-      </div>
-
-      {/* Right Section */}
-      <div className="flex shrink-0 items-center gap-2 sm:gap-4">
-        {/* Search */}
-        <button className="hidden items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-sm text-white/40 transition hover:bg-white/[0.05] md:flex">
-          <Search className="size-4" />
-          Search projects
-        </button>
-
-        {/* Notification */}
-        <button
-          type="button"
-          aria-label="Notifications"
-          className="relative flex size-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-white/60 transition hover:bg-white/[0.06] hover:text-white sm:size-10"
-        >
-          <Bell className="size-4" />
-
-          <span className="absolute right-2 top-2 size-1.5 rounded-full bg-purple-400" />
-        </button>
-
-        {/* User */}
-        <div className="flex size-9 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-blue-500 text-sm font-semibold sm:size-10">
-          M
+          <p className="mt-1 truncate text-xs text-white/40 sm:text-sm">
+            {currentPage.subtitle}
+          </p>
         </div>
       </div>
     </header>

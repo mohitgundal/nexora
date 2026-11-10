@@ -8,7 +8,6 @@ import {
   ZoomIn,
   ZoomOut,
   Maximize,
-  RotateCcw,
 } from "lucide-react";
 
 const VIEWPORTS = {
@@ -65,19 +64,15 @@ const LivePreview = () => {
     if (!canvasRef.current) return;
 
     const availableWidth = canvasRef.current.clientWidth;
-    const availableHeight = canvasRef.current.clientHeight;
 
-    let targetWidth;
+    const targetWidth = isDesktop
+      ? availableWidth
+      : parseInt(currentViewport.width, 10);
 
-    if (viewport === "desktop") {
-      targetWidth = availableWidth;
-    } else {
-      targetWidth = parseInt(currentViewport.width, 10);
-    }
+    if (!targetWidth) return;
 
     const widthScale = (availableWidth / targetWidth) * 100;
 
-    // Fit-to-screen only scales down; it does not enlarge the viewport.
     setZoom(
       Math.max(MIN_ZOOM, Math.min(100, Math.floor(widthScale / 10) * 10)),
     );
@@ -88,12 +83,12 @@ const LivePreview = () => {
   }, [viewport]);
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[#08090d]">
-      {/* Toolbar */}
-      <div className="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-white/10 px-3 sm:px-4">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#08090d]">
+      {/* Responsive Toolbar */}
+      <div className="flex min-h-12 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-white/10 px-3 py-2 sm:px-4">
         {/* Preview Status */}
         <div className="flex min-w-0 items-center gap-2">
-          <span className="relative flex size-2">
+          <span className="relative flex size-2 shrink-0">
             <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-50" />
             <span className="relative inline-flex size-2 rounded-full bg-emerald-400" />
           </span>
@@ -125,7 +120,7 @@ const LivePreview = () => {
         </div>
 
         {/* Zoom Controls */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5">
           <button
             type="button"
             title="Zoom out"
@@ -140,6 +135,7 @@ const LivePreview = () => {
           <button
             type="button"
             title="Reset zoom"
+            aria-label="Reset zoom"
             onClick={resetZoom}
             className="min-w-[42px] rounded-md px-1.5 py-1 text-center text-[11px] font-medium text-gray-300 transition hover:bg-white/5 hover:text-white"
           >
@@ -184,9 +180,12 @@ const LivePreview = () => {
       {/* Preview Canvas */}
       <div
         ref={canvasRef}
-        className="relative min-h-0 flex-1 overflow-auto bg-[#111318] p-3 sm:p-4"
+        className="relative flex min-h-0 flex-1 flex-col overflow-auto overscroll-contain bg-[#111318] p-3 sm:p-4"
+        style={{
+          WebkitOverflowScrolling: "touch",
+          touchAction: "pan-x pan-y",
+        }}
       >
-        {/* Device Information */}
         <div className="mb-3 flex items-center justify-center gap-2 text-[11px] text-gray-500">
           <span>{currentViewport.label}</span>
           <span className="text-gray-700">•</span>
@@ -197,14 +196,12 @@ const LivePreview = () => {
 
         {/* Device Viewport */}
         <div
-          className={`mx-auto overflow-hidden rounded-lg bg-white shadow-2xl transition-[width] duration-300 ${
+          className={`mx-auto flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg bg-white shadow-2xl transition-[width] duration-300 ${
             isDesktop ? "w-full" : "shrink-0"
           }`}
           style={{
             width: currentViewport.width,
             maxWidth: isDesktop ? "100%" : "none",
-            minHeight: "300px",
-            height: "calc(100% - 30px)",
           }}
         >
           {/* Zoom Layer */}
@@ -225,6 +222,7 @@ const LivePreview = () => {
                 width: "100%",
                 height: "100%",
                 minHeight: "300px",
+                touchAction: "pan-x pan-y",
               }}
             />
           </div>

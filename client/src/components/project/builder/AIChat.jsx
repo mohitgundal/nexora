@@ -1,62 +1,73 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ArrowUp, Bot, Sparkles } from "lucide-react";
 
-const AIChat = ({ project, onAIAction }) => {
+const AIChat = ({
+  project,
+  conversation,
+  onMessagesChange,
+  onAIAction,
+}) => {
   const [message, setMessage] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      role: "assistant",
-      content: `Your initial website for ${project.name} is ready. You can ask me to change content, redesign sections, add features, or improve the experience.`,
-    },
-  ]);
+  const messagesEndRef = useRef(null);
+
+  const messages = conversation?.messages || [];
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "end",
+    });
+  }, [messages, isProcessing]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
 
     const trimmedMessage = message.trim();
 
-    if (!trimmedMessage || isProcessing) return;
+    if (!trimmedMessage || isProcessing || !conversation) return;
 
     const userMessage = {
       id: crypto.randomUUID(),
       role: "user",
       content: trimmedMessage,
+      createdAt: new Date().toISOString(),
     };
 
-    setMessages((previousMessages) => [
-      ...previousMessages,
-      userMessage,
-    ]);
+    const messagesAfterUser = [...messages, userMessage];
 
+    onMessagesChange(messagesAfterUser);
     setMessage("");
     setIsProcessing(true);
 
     try {
       const aiResponse = await onAIAction(trimmedMessage);
 
-      if (aiResponse) {
-        setMessages((previousMessages) => [
-          ...previousMessages,
-          {
-            id: crypto.randomUUID(),
-            role: "assistant",
-            content: aiResponse,
-          },
-        ]);
-      }
+      const assistantMessage = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content:
+          aiResponse ||
+          "Your requested changes have been processed.",
+        createdAt: new Date().toISOString(),
+      };
+
+      onMessagesChange([
+        ...messagesAfterUser,
+        assistantMessage,
+      ]);
     } catch (error) {
       console.error("AI action failed:", error);
 
-      setMessages((previousMessages) => [
-        ...previousMessages,
+      onMessagesChange([
+        ...messagesAfterUser,
         {
           id: crypto.randomUUID(),
           role: "assistant",
           content:
             "I couldn't apply that change. Please try describing the change differently.",
+          createdAt: new Date().toISOString(),
         },
       ]);
     } finally {
@@ -65,124 +76,95 @@ const AIChat = ({ project, onAIAction }) => {
   };
 
   return (
-    <section className="flex h-full min-h-0 flex-col border-r border-white/10">
+    <section className="flex h-full min-h-0 flex-col">
 
-      {/* Header */}
-
-      <div className="border-b border-white/10 px-4 py-4">
-
-        <div className="flex items-center gap-2">
-
-          <div className="flex size-8 items-center justify-center rounded-lg bg-purple-400/10">
-            <Sparkles className="size-4 text-purple-300" />
-          </div>
-
-          <div>
-            <h2 className="text-sm font-medium">
-              Nexora AI
-            </h2>
-
-            <p className="mt-0.5 text-xs text-white/30">
-              Modify your website with natural language
-            </p>
-          </div>
-
+      {/* Conversation header */}
+      <div className="flex shrink-0 items-center gap-2 border-b border-white/10 px-3 py-2 sm:px-4 sm:py-3">
+        <div className="flex size-8 items-center justify-center rounded-lg bg-purple-400/10">
+          <Sparkles size={15} className="text-purple-300" />
         </div>
 
+        <div className="min-w-0">
+          <h2 className="text-xs font-semibold text-white">
+            Nexora AI
+          </h2>
+
+          <p className="truncate text-[10px] text-white/35">
+            Working on {project.name}
+          </p>
+        </div>
+
+        <div className="ml-auto flex items-center gap-1.5">
+          <span className="size-1.5 rounded-full bg-green-400" />
+          <span className="text-[10px] text-white/35">
+            Ready to assist
+          </span>
+        </div>
       </div>
 
-
       {/* Messages */}
-
-      <div className="flex-1 space-y-4 overflow-y-auto p-4">
-
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-3 py-3 sm:space-y-4 sm:px-5 sm:py-4">
         {messages.map((chatMessage) => (
-
           <div
             key={chatMessage.id}
-            className={`flex gap-3 ${
+            className={`flex gap-2.5 ${
               chatMessage.role === "user"
                 ? "justify-end"
                 : "justify-start"
             }`}
           >
-
             {chatMessage.role === "assistant" && (
-
               <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-purple-400/10">
-
-                <Bot className="size-4 text-purple-300" />
-
+                <Bot size={14} className="text-purple-300" />
               </div>
-
             )}
 
-
             <div
-              className={`max-w-[85%] rounded-xl px-3 py-2.5 text-xs leading-6 ${
+              className={`max-w-[88%] whitespace-pre-wrap rounded-2xl px-3.5 py-2.5 text-xs leading-6 sm:max-w-[75%] ${
                 chatMessage.role === "user"
-                  ? "bg-white text-black"
-                  : "border border-white/10 bg-white/[0.03] text-white/55"
+                  ? "rounded-br-md bg-white text-black"
+                  : "rounded-bl-md border border-white/10 bg-white/[0.035] text-white/75"
               }`}
             >
               {chatMessage.content}
             </div>
-
           </div>
-
         ))}
 
-
         {isProcessing && (
-
-          <div className="flex gap-3">
-
+          <div className="flex gap-2.5">
             <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-purple-400/10">
-              <Bot className="size-4 text-purple-300" />
+              <Bot size={14} className="text-purple-300" />
             </div>
 
-            <div className="flex items-center gap-1 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
-
-              <span className="size-1.5 animate-pulse rounded-full bg-white/40" />
-
+            <div className="flex items-center gap-1 rounded-2xl rounded-bl-md border border-white/10 bg-white/[0.035] px-4 py-3">
+              <span className="size-1.5 animate-pulse rounded-full bg-purple-300/70" />
               <span
-                className="size-1.5 animate-pulse rounded-full bg-white/40"
+                className="size-1.5 animate-pulse rounded-full bg-purple-300/70"
                 style={{ animationDelay: "150ms" }}
               />
-
               <span
-                className="size-1.5 animate-pulse rounded-full bg-white/40"
+                className="size-1.5 animate-pulse rounded-full bg-purple-300/70"
                 style={{ animationDelay: "300ms" }}
               />
-
             </div>
-
           </div>
-
         )}
 
+        <div ref={messagesEndRef} />
       </div>
 
-
-      {/* Input */}
-
+      {/* Composer */}
       <form
         onSubmit={handleSubmit}
-        className="border-t border-white/10 p-3"
+        className="shrink-0 border-t border-white/10 p-2 sm:p-4"
       >
-
-        <div className="flex items-end gap-2 rounded-xl border border-white/10 bg-white/[0.03] p-2 focus-within:border-purple-400/40">
-
+        <div className="flex items-end gap-2 rounded-xl border border-white/10 bg-white/[0.035] p-2 transition focus-within:border-purple-400/40">
           <textarea
             value={message}
-            onChange={(event) =>
-              setMessage(event.target.value)
-            }
+            onChange={(event) => setMessage(event.target.value)}
             onKeyDown={(event) => {
-              if (
-                event.key === "Enter" &&
-                !event.shiftKey
-              ) {
+              if (event.key === "Enter" && !event.shiftKey) {
                 event.preventDefault();
                 handleSubmit(event);
               }
@@ -190,30 +172,27 @@ const AIChat = ({ project, onAIAction }) => {
             placeholder={
               isProcessing
                 ? "Nexora is working..."
-                : "Ask Nexora to change something..."
+                : "Ask Nexora to change or improve something..."
             }
             rows={2}
             disabled={isProcessing}
-            className="min-h-12 flex-1 resize-none bg-transparent px-2 py-1 text-xs leading-5 text-white outline-none placeholder:text-white/25 disabled:opacity-50"
+            className="max-h-28 min-h-10 flex-1 resize-none bg-transparent px-2 py-1.5 text-xs leading-5 text-white outline-none placeholder:text-white/30 disabled:opacity-50"
           />
-
 
           <button
             type="submit"
             disabled={!message.trim() || isProcessing}
-            className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white text-black transition hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-30"
+            className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white text-black transition hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-30"
+            aria-label="Send message"
           >
-            <ArrowUp className="size-4" />
+            <ArrowUp size={16} />
           </button>
-
         </div>
 
-        <p className="mt-2 px-1 text-[10px] text-white/20">
-          Press Enter to send · Shift + Enter for a new line
+        <p className="mt-2 px-1 text-[10px] text-white/25">
+          Enter to send · Shift + Enter for a new line
         </p>
-
       </form>
-
     </section>
   );
 };
