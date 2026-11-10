@@ -1,12 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { ArrowUp, Bot, Sparkles } from "lucide-react";
 
-const AIChat = ({
-  project,
-  conversation,
-  onMessagesChange,
-  onAIAction,
-}) => {
+const AIChat = ({ project, conversation, onMessagesChange, onAIAction }) => {
   const [message, setMessage] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -47,16 +42,11 @@ const AIChat = ({
       const assistantMessage = {
         id: crypto.randomUUID(),
         role: "assistant",
-        content:
-          aiResponse ||
-          "Your requested changes have been processed.",
+        content: aiResponse || "Your requested changes have been processed.",
         createdAt: new Date().toISOString(),
       };
 
-      onMessagesChange([
-        ...messagesAfterUser,
-        assistantMessage,
-      ]);
+      onMessagesChange([...messagesAfterUser, assistantMessage]);
     } catch (error) {
       console.error("AI action failed:", error);
 
@@ -76,18 +66,15 @@ const AIChat = ({
   };
 
   return (
-    <section className="flex h-full min-h-0 flex-col">
-
+    <section className="flex min-h-0 flex-col lg:h-full">
       {/* Conversation header */}
-      <div className="flex shrink-0 items-center gap-2 border-b border-white/10 px-3 py-2 sm:px-4 sm:py-3">
+      <div className="hidden shrink-0 items-center gap-2 border-b border-white/10 px-3 py-2 sm:px-4 sm:py-3 lg:flex">
         <div className="flex size-8 items-center justify-center rounded-lg bg-purple-400/10">
           <Sparkles size={15} className="text-purple-300" />
         </div>
 
         <div className="min-w-0">
-          <h2 className="text-xs font-semibold text-white">
-            Nexora AI
-          </h2>
+          <h2 className="text-xs font-semibold text-white">Nexora AI</h2>
 
           <p className="truncate text-[10px] text-white/35">
             Working on {project.name}
@@ -96,21 +83,17 @@ const AIChat = ({
 
         <div className="ml-auto flex items-center gap-1.5">
           <span className="size-1.5 rounded-full bg-green-400" />
-          <span className="text-[10px] text-white/35">
-            Ready to assist
-          </span>
+          <span className="text-[10px] text-white/35">Ready to assist</span>
         </div>
       </div>
 
       {/* Messages */}
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-3 py-3 sm:space-y-4 sm:px-5 sm:py-4">
+      <div className="hidden min-h-0 flex-1 flex-col space-y-3 overflow-y-auto overscroll-contain px-3 py-3 sm:space-y-4 sm:px-5 sm:py-4 lg:flex">
         {messages.map((chatMessage) => (
           <div
             key={chatMessage.id}
             className={`flex gap-2.5 ${
-              chatMessage.role === "user"
-                ? "justify-end"
-                : "justify-start"
+              chatMessage.role === "user" ? "justify-end" : "justify-start"
             }`}
           >
             {chatMessage.role === "assistant" && (
@@ -157,7 +140,7 @@ const AIChat = ({
       {/* Composer */}
       <form
         onSubmit={handleSubmit}
-        className="shrink-0 border-t border-white/10 p-2 sm:p-4"
+        className="shrink-0 border-t border-white/10 p-2 lg:p-4"
       >
         <div className="flex items-end gap-2 rounded-xl border border-white/10 bg-white/[0.035] p-2 transition focus-within:border-purple-400/40">
           <textarea
@@ -189,7 +172,7 @@ const AIChat = ({
           </button>
         </div>
 
-        <p className="mt-2 px-1 text-[10px] text-white/25">
+        <p className="mt-2 hidden px-1 text-[10px] text-white/25 lg:block">
           Enter to send · Shift + Enter for a new line
         </p>
       </form>

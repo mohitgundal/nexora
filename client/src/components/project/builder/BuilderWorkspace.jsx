@@ -119,14 +119,21 @@ const BuilderWorkspace = ({
       <div className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-[#08080a]">
         {/* MAIN WORKSPACE */}
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-          {/* BUILD MODE — DESKTOP */}
+          {/* BUILD MODE — RESPONSIVE */}
           {activeView === "build" && (
-            <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
-              {/* AI CHAT SIDEBAR */}
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden lg:flex-row">
+              {/* FULL-SIZE WEBSITE PREVIEW */}
+              <main className="relative order-1 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#08090d] lg:order-2">
+                <div className="flex min-h-0 flex-1 overflow-hidden">
+                  <LivePreview files={files} />
+                </div>
+              </main>
+
+              {/* AI CHAT — DESKTOP SIDEBAR / MOBILE BOTTOM COMPOSER */}
               <aside
-                className={`${
-                  chatOpen ? "flex w-[360px] shrink-0" : "hidden w-0"
-                } min-h-0 flex-col overflow-hidden border-r border-white/10 bg-[#0d0d10]`}
+                className={`order-2 flex max-h-[88px] w-full shrink-0 flex-col overflow-hidden border-t border-white/10 bg-[#0d0d10] lg:order-1 lg:max-h-none lg:border-r lg:border-t-0 ${
+                  chatOpen ? "lg:flex lg:w-[360px]" : "lg:hidden lg:w-0"
+                }`}
               >
                 <AIChat
                   project={project}
@@ -135,13 +142,6 @@ const BuilderWorkspace = ({
                   onAIAction={onAIAction}
                 />
               </aside>
-
-              {/* FULL-SIZE WEBSITE PREVIEW */}
-              <main className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#08090d]">
-                <div className="flex min-h-0 flex-1 overflow-hidden">
-                  <LivePreview files={files} />
-                </div>
-              </main>
             </div>
           )}
 

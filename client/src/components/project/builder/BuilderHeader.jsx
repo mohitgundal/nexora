@@ -49,13 +49,13 @@ const BuilderHeader = ({
           <ArrowLeft size={16} />
         </button>
 
-        {/* AI Chat Toggle */}
+        {/* AI Chat Toggle — Desktop only */}
         <button
           type="button"
           onClick={onToggleChat}
           title="Toggle AI chat"
           aria-label="Toggle AI chat"
-          className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-white/10 text-white/55 transition hover:bg-white/[0.06] hover:text-white"
+          className="hidden size-9 shrink-0 items-center justify-center rounded-lg border border-white/10 text-white/55 transition hover:bg-white/[0.06] hover:text-white lg:flex"
         >
           <MessageSquare size={17} />
         </button>
