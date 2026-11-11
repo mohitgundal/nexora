@@ -118,121 +118,131 @@ const BuilderWorkspace = ({
     >
       <div className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-[#08080a]">
         {/* MAIN WORKSPACE */}
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           {/* BUILD MODE — RESPONSIVE */}
-          {activeView === "build" && (
-            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden lg:flex-row">
-              {/* FULL-SIZE WEBSITE PREVIEW */}
-              <main className="relative order-1 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#08090d] lg:order-2">
-                <div className="flex min-h-0 flex-1 overflow-hidden">
-                  <LivePreview files={files} />
-                </div>
-              </main>
+          <section
+            aria-hidden={activeView !== "build"}
+            className={`absolute inset-0 flex min-h-0 min-w-0 flex-col overflow-hidden transition-opacity duration-150 lg:flex-row ${
+              activeView === "build"
+                ? "z-10 opacity-100"
+                : "pointer-events-none z-0 opacity-0"
+            }`}
+          >
+            {/* FULL-SIZE WEBSITE PREVIEW */}
+            <main className="relative order-1 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#08090d] lg:order-2">
+              <div className="flex min-h-0 flex-1 overflow-hidden">
+                <LivePreview files={files} />
+              </div>
+            </main>
 
-              {/* AI CHAT — DESKTOP SIDEBAR / MOBILE BOTTOM COMPOSER */}
-              <aside
-                className={`order-2 flex max-h-[88px] w-full shrink-0 flex-col overflow-hidden border-t border-white/10 bg-[#0d0d10] lg:order-1 lg:max-h-none lg:border-r lg:border-t-0 ${
-                  chatOpen ? "lg:flex lg:w-[360px]" : "lg:hidden lg:w-0"
-                }`}
-              >
-                <AIChat
-                  project={project}
-                  conversation={activeConversation}
-                  onMessagesChange={onConversationMessagesChange}
-                  onAIAction={onAIAction}
-                />
-              </aside>
-            </div>
-          )}
+            {/* AI CHAT — DESKTOP SIDEBAR / MOBILE BOTTOM COMPOSER */}
+            <aside
+              className={`order-2 flex max-h-[88px] w-full shrink-0 flex-col overflow-hidden border-t border-white/10 bg-[#0d0d10] lg:order-1 lg:max-h-none lg:border-r lg:border-t-0 ${
+                chatOpen ? "lg:flex lg:w-[360px]" : "lg:hidden lg:w-0"
+              }`}
+            >
+              <AIChat
+                project={project}
+                conversation={activeConversation}
+                onMessagesChange={onConversationMessagesChange}
+                onAIAction={onAIAction}
+              />
+            </aside>
+          </section>
 
           {/* CODE MODE */}
-          {activeView === "code" && (
-            <div className="flex min-h-0 flex-1 flex-col p-3 sm:p-4">
-              <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-sm font-semibold text-white">
-                    Code workspace
-                  </h2>
-                  <p className="mt-1 text-[11px] text-white/35">
-                    Inspect and edit your generated project files
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.03] p-1">
-                  <button
-                    type="button"
-                    onClick={() => setCodeSidebarView("files")}
-                    className={`flex items-center gap-1.5 rounded-md px-2.5 py-2 text-[11px] ${
-                      codeSidebarView === "files"
-                        ? "bg-white text-black"
-                        : "text-white/50 hover:text-white"
-                    }`}
-                  >
-                    <FolderOpen size={13} />
-                    Files
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setCodeSidebarView("versions")}
-                    className={`flex items-center gap-1.5 rounded-md px-2.5 py-2 text-[11px] ${
-                      codeSidebarView === "versions"
-                        ? "bg-white text-black"
-                        : "text-white/50 hover:text-white"
-                    }`}
-                  >
-                    <History size={13} />
-                    Versions
-                  </button>
-                </div>
+          <section
+            aria-hidden={activeView !== "code"}
+            className={`absolute inset-0 flex min-h-0 min-w-0 flex-col overflow-hidden p-3 sm:p-4 transition-opacity duration-150 ${
+              activeView === "code"
+                ? "z-10 opacity-100"
+                : "pointer-events-none z-0 opacity-0"
+            }`}
+          >
+            <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold text-white">
+                  Code workspace
+                </h2>
+                <p className="mt-1 text-[11px] text-white/35">
+                  Inspect and edit your generated project files
+                </p>
               </div>
 
-              <div className="grid min-h-0 flex-1 overflow-hidden rounded-xl border border-white/10 lg:grid-cols-[230px_minmax(0,1fr)]">
-                <aside className="hidden min-h-0 border-r border-white/10 bg-[#0d0d10] sm:block">
-                  {codeSidebarView === "files" ? (
-                    <FileExplorer
-                      files={files}
-                      activeFile={activeFile}
-                      onSelectFile={onSelectFile}
-                    />
-                  ) : (
-                    <VersionHistory
-                      versions={versions}
-                      onRestoreVersion={onRestoreVersion}
-                    />
-                  )}
-                </aside>
+              <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.03] p-1">
+                <button
+                  type="button"
+                  onClick={() => setCodeSidebarView("files")}
+                  className={`flex items-center gap-1.5 rounded-md px-2.5 py-2 text-[11px] ${
+                    codeSidebarView === "files"
+                      ? "bg-white text-black"
+                      : "text-white/50 hover:text-white"
+                  }`}
+                >
+                  <FolderOpen size={13} />
+                  Files
+                </button>
 
-                <div className="min-h-0 min-w-0 overflow-hidden">
-                  <CodeEditor
-                    code={code}
-                    onChange={onCodeChange}
-                    activeFile={activeFile}
-                    saveStatus={saveStatus}
-                  />
-                </div>
-              </div>
-
-              {/* Mobile file / version selector */}
-              <div className="mt-2 flex gap-2 sm:hidden">
-                {files.map((file) => (
-                  <button
-                    key={file.path}
-                    type="button"
-                    onClick={() => onSelectFile(file.path)}
-                    className={`max-w-[48%] truncate rounded-lg border px-3 py-2 text-[10px] ${
-                      activeFile === file.path
-                        ? "border-purple-400/40 bg-purple-400/10 text-purple-200"
-                        : "border-white/10 text-white/50"
-                    }`}
-                  >
-                    <FileCode2 size={11} className="mr-1 inline" />
-                    {file.path.split("/").pop()}
-                  </button>
-                ))}
+                <button
+                  type="button"
+                  onClick={() => setCodeSidebarView("versions")}
+                  className={`flex items-center gap-1.5 rounded-md px-2.5 py-2 text-[11px] ${
+                    codeSidebarView === "versions"
+                      ? "bg-white text-black"
+                      : "text-white/50 hover:text-white"
+                  }`}
+                >
+                  <History size={13} />
+                  Versions
+                </button>
               </div>
             </div>
-          )}
+
+            <div className="grid min-h-0 flex-1 overflow-hidden rounded-xl border border-white/10 lg:grid-cols-[230px_minmax(0,1fr)]">
+              <aside className="hidden min-h-0 border-r border-white/10 bg-[#0d0d10] sm:block">
+                {codeSidebarView === "files" ? (
+                  <FileExplorer
+                    files={files}
+                    activeFile={activeFile}
+                    onSelectFile={onSelectFile}
+                  />
+                ) : (
+                  <VersionHistory
+                    versions={versions}
+                    onRestoreVersion={onRestoreVersion}
+                  />
+                )}
+              </aside>
+
+              <div className="min-h-0 min-w-0 overflow-hidden">
+                <CodeEditor
+                  code={code}
+                  onChange={onCodeChange}
+                  activeFile={activeFile}
+                  saveStatus={saveStatus}
+                />
+              </div>
+            </div>
+
+            {/* Mobile file / version selector */}
+            <div className="mt-2 flex gap-2 sm:hidden">
+              {files.map((file) => (
+                <button
+                  key={file.path}
+                  type="button"
+                  onClick={() => onSelectFile(file.path)}
+                  className={`max-w-[48%] truncate rounded-lg border px-3 py-2 text-[10px] ${
+                    activeFile === file.path
+                      ? "border-purple-400/40 bg-purple-400/10 text-purple-200"
+                      : "border-white/10 text-white/50"
+                  }`}
+                >
+                  <FileCode2 size={11} className="mr-1 inline" />
+                  {file.path.split("/").pop()}
+                </button>
+              ))}
+            </div>
+          </section>
         </div>
       </div>
     </SandpackProvider>
